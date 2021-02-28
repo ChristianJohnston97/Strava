@@ -1,18 +1,28 @@
 # Strava Project using TypeLevel libraries
-Project to interact with the Strava API through an HTTP client and then creating my own HTTP4s server.
+Project to interact with the Strava API through an HTTP client and then creating my own HTTP4s server to programtically save this data to an DB.
 
 ### Overview
 Strava exposes user data through a REST API: https://developers.strava.com and https://developers.strava.com/docs/reference/
-I have created a HTTP client using http4s to query the Strava API.
+I have created a HTTP client `/src/main/scala/strava/client` using http4s to query the Strava API.
 For example: `http GET "https://www.strava.com/api/v3/athlete" "Authorization: Bearer [[token]]"` which returns info about the currently authenticated athlete.
-To make this authenticated request, we need an authentication token (see next session).
-Also created an HTTP server using http4s to manage the persisting of this data to a database. Flyway is used to manage DB schema migrations.
+To make this authenticated request, we need an authentication token (see 'OAuth' session).
+Also created an HTTP server `/src/main/scala/strava/server` using http4s to manage the persisting of this data to a database. Flyway is used to manage DB schema migrations.
+
+### Libraries Used
+- Cats (type class instances)
+- Cats effect (IO Monad)
+- Doobie (Functional JDBC layer)
+- HTTP4S (HTTP client and server)
+- Flyway (Database Migrations) with MySQL
+- Circe (Serialisation)
+- Redis4Cats (Redis Client)
+- Log4Cats (Logging)
 
 ### OAuth
 Strava used OAuth2 for authentication. The docs are very good: https://developers.strava.com/docs/authentication/.
 The basic premise is that the application is registered with Strava and this provides us with a secret. We can then 
 call the Strava authentication endpoint, passing in this secret which provides with an authentication bearer token.
-We can then use this token in subsequent calls.
+We can then use this token in subsequent calls:
 
 We can test this with curl:
 ```bash
@@ -26,6 +36,12 @@ I have implemented a bearer token retrieval service which:
 - An authorization code is provided to our application
 - The application fetches an access token using the authorization code from previous step
 - The access token is then used in all Strava API requests
+
+```scala
+trait AuthClient {
+  def getBearerToken(blocker: Blocker, clientId: String, clientSecret: String): IO[Token]
+}
+```
 
 
 ### Programming Style
@@ -49,16 +65,6 @@ trait UserStatisticsRepository[F[_]] {
 ### IO Monad
 Throughout this code I have used the IO monad from Cats Effect library however, due to Final Tagless technique, this could
 easily be swapped out to ZIO or Monix Task. Future is not used as it is not referentially transparent.
-
-### Libraries Used
-- Cats (type class instances)
-- Cats effect (IO Monad)
-- Doobie (Functional JDBC layer)
-- HTTP4S (HTTP client and server)
-- Flyway (Database Migrations) with MySQL
-- Circe (Serialisation)
-- Redis4Cats (Redis Client)
-- Log4Cats (Logging)
 
 ### Infrastructure and Deployment
 - Docker Compose (Dockerised Flyway and MySQL)
